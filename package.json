@@ -1,0 +1,20 @@
+{
+  "name": "react-ts",
+  "version": "1.0.0",
+  "description": "React like framework using intersection types in typescript using tsx",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Marcel-Alin Rusu",
+  "license": "ISC",
+  "dependencies": {
+    "baconjs": "^0.7.95",
+    "lodash": "^4.17.4",
+    "nativejsx": "^4.2.0",
+    "ts-loader": "^2.0.3"
+  },
+  "devDependencies": {
+    "webpack": "^3.5.5"
+  }
+}
