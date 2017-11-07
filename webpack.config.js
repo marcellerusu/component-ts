@@ -1,5 +1,5 @@
 module.exports = {
- entry: './some.ts',
+ entry: './Examples/Incrementers/Root.ts',
  output: {
    filename: 'bundle.js',
    path: __dirname
@@ -13,6 +13,9 @@ module.exports = {
    ]
  },
  resolve: {
-   extensions: [".tsx", ".ts", ".js"]
+   extensions: [".tsx", ".ts", ".js"],
+  modules: [
+    "node_modules"
+  ]
  },
 };

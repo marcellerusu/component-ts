@@ -11,10 +11,10 @@
   "dependencies": {
     "baconjs": "^0.7.95",
     "lodash": "^4.17.4",
-    "nativejsx": "^4.2.0",
     "ts-loader": "^2.0.3"
   },
   "devDependencies": {
+    "@types/node": "^8.0.33",
     "webpack": "^3.5.5"
   }
 }
