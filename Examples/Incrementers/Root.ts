@@ -2,7 +2,6 @@ import { Component, Dom } from '../../component-ts'
 import { Increment } from './Increment'
 
 namespace Root {
-  const _name = 'Root'
   type State = Component.State & { incrementers: Increment.State[] }
 
   type Kind = 'Add_Incrementer'
@@ -11,7 +10,7 @@ namespace Root {
   type Action = Component.Action<Kind, Data>
 
   const Render = (state: State): Dom.Element => 
-    Dom.ForComponent(_name,
+    Dom.ForComponent(state._id,
       Dom.Div(
         [],
         [
@@ -35,10 +34,8 @@ namespace Root {
     }
   }
 
-  export const Create = (): State => 
-    Component.CreateRootComponent<State, Action>({
-      state: { _name, incrementers: [ Increment.Create(0) ] }, update: Update, render: Render 
-    }).state
-  
-  Create()
+  // register root component
+  Component.CreateRootComponent<State, Action>({
+    state: { incrementers: [ Increment.Create(0) ] }, update: Update, render: Render 
+  })
 }

@@ -1,7 +1,6 @@
 import { Component, Dom } from '../../component-ts'
 
 export namespace Increment {
-  const _name = 'Increment'
   export type State = Component.State & { count: number, id: number }
 
   type Id = number  
@@ -10,8 +9,8 @@ export namespace Increment {
 
   export type Action = Component.Action<Kind, Data>
 
-  export const Render = ({ count, id }: State): Dom.Element => 
-    Dom.ForComponent(_name,
+  export const Render = ({ count, id, _id }: State): Dom.Element => 
+    Dom.ForComponent(_id,
       Dom.Div(
         [],
         [
@@ -42,8 +41,5 @@ export namespace Increment {
   }
 
   // registers component and returns the state
-  export const Create = (id: number, startCount = 0): State => 
-    Component.CreateComponent<State, Action>({
-      state: { _name, id, count: startCount }, render: Render, update: Update
-    }).state
+  export const Create = (id: number, startCount = 0): State => ({ id, count: startCount })
 }

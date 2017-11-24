@@ -3,11 +3,11 @@ const _ = require('lodash')
 
 export namespace Component {
   const rootElementId = 'component-index'
-  const dataAttr = 'data-component-ts'
+  const dataAttr = 'data-cid'
 
   export type Action<K, D> = { kind: K, data?: D }
 
-  export type State = { _name: string }
+  export type State = { _id?: number }
 
   export type Component<S extends State, A extends Action<any, any>> = {
     state: S,
@@ -21,13 +21,21 @@ export namespace Component {
     onValue: (onV: (a: Action<any, any>) => void) => void,
     push: (a: Action<any, any>) => void
   }
+
   let components: Component<State, any>[] = []
 
   // this is fine
-  export const CreateComponent = <S extends State, A extends Action<any, any>>(component: Component<S, A>) => {
-    components.push(component)
-    return component
-  } 
+  // export const CreateComponent = <S extends State, A extends Action<any, any>>(component: Component<S, A>) => {
+  //   const newComponent = {...component,
+  //     state: {...(component.state as object), _id: cur_id++}
+  //   }
+    
+  //   components.push(newComponent)
+
+  //   return newComponent
+  // } 
+
+  // export const RegisterUpdate = 
 
   // this is fine
   export const CreateRootComponent = <S extends State, A extends Action<any, any>>(component: Component<S, A>) => {
@@ -38,7 +46,8 @@ export namespace Component {
       throw `state can't be a function - ${component}`
 
     rootComponent = component
-    const { state, render } = rootComponent
+    let { state, render } = rootComponent
+    state = {...state, _id: cur_id++}
     window.onload = () => {
       const elem = document.getElementById(rootElementId);
       if (elem)
@@ -46,8 +55,9 @@ export namespace Component {
       else
         throw `Can't find root element - #${rootElementId}`
     }
+    rootComponent = {...rootComponent, state}
     components.push(rootComponent)
-    return rootComponent as Component<S, A>
+    return rootComponent
   }
 
   // this is not fine
@@ -56,35 +66,38 @@ export namespace Component {
     if (!root)
       throw `Can't find root element - #${rootElementId}`
 
-    const findHtmlElem = (compName: string, root: HTMLElement): HTMLElement | null => {
+    const findHtmlElem = (compId: number, root: HTMLElement): HTMLElement | null => {
       for (let i = 0; i < root.children.length; i++) {
         const child = root.children.item(i) as HTMLElement
         const name = child.getAttribute(dataAttr)
         if (!name) continue
-        if (name === compName)
+        if (name === compId.toString())
           return child
-        return findHtmlElem(compName, child)
+        return findHtmlElem(compId, child)
       }
       return null
     }
 
-    components.map(({render, state, update}) => {
+    components.forEach((comp) => {
+      const {render, state, update} = comp
       const newState = update(state, action)
-      if (_.isEqual(newState, state)) return state
+      if (_.isEqual(newState, state)) return
       const newHtml = toHtml(render(newState))
       const rootNode = document.getElementById(rootElementId)
       if (!rootNode) throw `can't find root element ${rootElementId}`
-      const oldHtml = findHtmlElem(state._name, rootNode)
-      if (!oldHtml) throw `can't find html element for ${state._name}`
-      if (!oldHtml.parentElement) throw `can't get parent html element of ${state._name}`
+      if (!state._id) throw `state doesn't have an _id ${state}`
+      const oldHtml = findHtmlElem(state._id, rootNode)
+      if (!oldHtml) throw `can't find html element for ${state._id}`
+      if (!oldHtml.parentElement) throw `can't get parent html element of ${state._id}`
       oldHtml.parentElement.replaceChild(newHtml, oldHtml)
+      comp.state = newState
     })
   })
   
 
-  const toHtml = (element : Dom.Element, prevComponentName = ''): HTMLElement | Text => {
-    let {type, assignables, children, componentName, value} = element
-    if (!componentName) componentName = prevComponentName
+  const toHtml = (element : Dom.Element, prev_cid: number | undefined = undefined): HTMLElement | Text => {
+    let {type, assignables, children, value, _cid} = element
+    debugger
     if (type === 'Empty') return document.createElement('div')
     if (type === 'Text') {
       if (!value)
@@ -92,10 +105,12 @@ export namespace Component {
       const d = document.createTextNode(value)
       return d
     }
+    if (!_cid)
+      if (!prev_cid) throw `no cid or prev_cid`
+      else _cid = prev_cid
+    
     const elem = document.createElement(type.toLowerCase())
-    if (!componentName)
-      throw `${element} doesn't have a component name`
-    elem.setAttribute(dataAttr, componentName)
+    elem.setAttribute(dataAttr, _cid.toString())
     let events: Dom.Event<Action<any, any>>[] = []
 
     if (!assignables)
@@ -108,7 +123,6 @@ export namespace Component {
       } else {
         let event = assignable as Dom.Event<Action<any, any>>
         if (!event) throw `${assignable} is not a valid Assignable property on element`
-        if (!componentName) componentName = prevComponentName
         events.push(event)
       }
     })
@@ -118,7 +132,7 @@ export namespace Component {
     })
     if (children)
       children.forEach(child => {
-        elem.appendChild(toHtml(child, componentName))
+        elem.appendChild(toHtml(child, _cid))
       })
     return elem
   }
@@ -174,7 +188,7 @@ export namespace Dom {
 
   export type Element = {
     type: ElementType,
-    componentName?: string,
+    _cid?: number,
     assignables?: Assignable<any, any>[],
     children?: Element[],
     value?: string
@@ -182,9 +196,9 @@ export namespace Dom {
 
   type ElementFunction<T> = (attributes: Assignable<any, any>[], children?: Element[]) => Element
 
-  const emptyElement: Element = { type: 'Empty', componentName: '' }
+  const emptyElement: Element = { type: 'Empty' }
 
-  export const ForComponent = (name: string, e: Element): Element => ({ ...e, componentName: name })
+  export const ForComponent = (_cid: number | undefined, e: Element): Element => ({ ...e, _cid })
 
   export const Div: ElementFunction<DivType>
     = (attributes, children = [emptyElement]) => 

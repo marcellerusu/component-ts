@@ -75,15 +75,17 @@ const _ = __webpack_require__(7);
 var Component;
 (function (Component) {
     const rootElementId = 'component-index';
-    const dataAttr = 'data-component-ts';
+    const dataAttr = 'data-cid';
     let rootComponent; // ah this is annoying
     let rootHtml;
     const eventStream = Bacon.Bus();
+    let cur_id = 0;
     let components = [];
     // this is fine
     Component.CreateComponent = (component) => {
-        components.push(component);
-        return component;
+        const newComponent = Object.assign({}, component, { state: Object.assign({}, component.state, { _id: cur_id++ }) });
+        components.push(newComponent);
+        return newComponent;
     };
     // this is fine
     Component.CreateRootComponent = (component) => {
@@ -92,7 +94,8 @@ var Component;
         if (typeof component.state === 'function')
             throw `state can't be a function - ${component}`;
         rootComponent = component;
-        const { state, render } = rootComponent;
+        let { state, render } = rootComponent;
+        state = Object.assign({}, state, { _id: cur_id++ });
         window.onload = () => {
             const elem = document.getElementById(rootElementId);
             if (elem)
@@ -100,6 +103,7 @@ var Component;
             else
                 throw `Can't find root element - #${rootElementId}`;
         };
+        rootComponent = Object.assign({}, rootComponent, { state });
         components.push(rootComponent);
         return rootComponent;
     };
@@ -108,38 +112,41 @@ var Component;
         const root = document.getElementById(rootElementId);
         if (!root)
             throw `Can't find root element - #${rootElementId}`;
-        const findHtmlElem = (compName, root) => {
+        const findHtmlElem = (compId, root) => {
             for (let i = 0; i < root.children.length; i++) {
                 const child = root.children.item(i);
                 const name = child.getAttribute(dataAttr);
                 if (!name)
                     continue;
-                if (name === compName)
+                if (name === compId.toString())
                     return child;
-                return findHtmlElem(compName, child);
+                return findHtmlElem(compId, child);
             }
             return null;
         };
-        components.map(({ render, state, update }) => {
+        components.forEach((comp) => {
+            const { render, state, update } = comp;
             const newState = update(state, action);
             if (_.isEqual(newState, state))
-                return state;
+                return;
             const newHtml = toHtml(render(newState));
             const rootNode = document.getElementById(rootElementId);
             if (!rootNode)
                 throw `can't find root element ${rootElementId}`;
-            const oldHtml = findHtmlElem(state._name, rootNode);
+            if (!state._id)
+                throw `state doesn't have an _id ${state}`;
+            const oldHtml = findHtmlElem(state._id, rootNode);
             if (!oldHtml)
-                throw `can't find html element for ${state._name}`;
+                throw `can't find html element for ${state._id}`;
             if (!oldHtml.parentElement)
-                throw `can't get parent html element of ${state._name}`;
+                throw `can't get parent html element of ${state._id}`;
             oldHtml.parentElement.replaceChild(newHtml, oldHtml);
+            comp.state = newState;
         });
     });
-    const toHtml = (element, prevComponentName = '') => {
-        let { type, assignables, children, componentName, value } = element;
-        if (!componentName)
-            componentName = prevComponentName;
+    const toHtml = (element, prev_cid = undefined) => {
+        let { type, assignables, children, value, _cid } = element;
+        debugger;
         if (type === 'Empty')
             return document.createElement('div');
         if (type === 'Text') {
@@ -148,10 +155,13 @@ var Component;
             const d = document.createTextNode(value);
             return d;
         }
+        if (!_cid)
+            if (!prev_cid)
+                throw `no cid or prev_cid`;
+            else
+                _cid = prev_cid;
         const elem = document.createElement(type.toLowerCase());
-        if (!componentName)
-            throw `${element} doesn't have a component name`;
-        elem.setAttribute(dataAttr, componentName);
+        elem.setAttribute(dataAttr, _cid.toString());
         let events = [];
         if (!assignables)
             throw `${element} doesn't have a assignables property`;
@@ -164,8 +174,6 @@ var Component;
                 let event = assignable;
                 if (!event)
                     throw `${assignable} is not a valid Assignable property on element`;
-                if (!componentName)
-                    componentName = prevComponentName;
                 events.push(event);
             }
         });
@@ -175,7 +183,7 @@ var Component;
         });
         if (children)
             children.forEach(child => {
-                elem.appendChild(toHtml(child, componentName));
+                elem.appendChild(toHtml(child, _cid));
             });
         return elem;
     };
@@ -187,8 +195,8 @@ var Dom;
     Dom.OnClick = event('click');
     Dom.OnMouseOver = event('OnMouseOver');
     Dom.href = (value) => ({ type: 'Href', value });
-    const emptyElement = { type: 'Empty', componentName: '' };
-    Dom.ForComponent = (name, e) => (Object.assign({}, e, { componentName: name }));
+    const emptyElement = { type: 'Empty' };
+    Dom.ForComponent = (_cid, e) => (Object.assign({}, e, { _cid }));
     Dom.Div = (attributes, children = [emptyElement]) => ({
         type: 'Div',
         assignables: attributes,
@@ -277,8 +285,7 @@ const component_ts_1 = __webpack_require__(0);
 const Increment_1 = __webpack_require__(8);
 var Root;
 (function (Root) {
-    const _name = 'Root';
-    const Render = (state) => component_ts_1.Dom.ForComponent(_name, component_ts_1.Dom.Div([], [
+    const Render = (state) => component_ts_1.Dom.ForComponent(state._id, component_ts_1.Dom.Div([], [
         ...state.incrementers.map(Increment_1.Increment.Render),
         component_ts_1.Dom.Button([component_ts_1.Dom.OnClick({ kind: 'Add_Incrementer' })], [component_ts_1.Dom.Text('Add')])
     ]));
@@ -292,10 +299,10 @@ var Root;
                 return state;
         }
     };
-    Root.Create = () => component_ts_1.Component.CreateRootComponent({
-        state: { _name, incrementers: [Increment_1.Increment.Create(0)] }, update: Update, render: Render
-    }).state;
-    Root.Create();
+    // register root component
+    component_ts_1.Component.CreateRootComponent({
+        state: { incrementers: [Increment_1.Increment.Create(0)] }, update: Update, render: Render
+    });
 })(Root || (Root = {}));
 
 
@@ -21007,8 +21014,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const component_ts_1 = __webpack_require__(0);
 var Increment;
 (function (Increment) {
-    const _name = 'Increment';
-    Increment.Render = ({ count, id }) => component_ts_1.Dom.ForComponent(_name, component_ts_1.Dom.Div([], [
+    Increment.Render = ({ count, id, _id }) => component_ts_1.Dom.ForComponent(_id, component_ts_1.Dom.Div([], [
         component_ts_1.Dom.Text(`Count = ${count}`),
         component_ts_1.Dom.Button([component_ts_1.Dom.OnClick({ kind: 'Increment', data: id })], [component_ts_1.Dom.Text('+')]),
         component_ts_1.Dom.Button([component_ts_1.Dom.OnClick({ kind: 'Decrement', data: id })], [component_ts_1.Dom.Text('-')])
@@ -21026,7 +21032,7 @@ var Increment;
     };
     // registers component and returns the state
     Increment.Create = (id, startCount = 0) => component_ts_1.Component.CreateComponent({
-        state: { _name, id, count: startCount }, render: Increment.Render, update: Increment.Update
+        state: { id, count: startCount }, render: Increment.Render, update: Increment.Update
     }).state;
 })(Increment = exports.Increment || (exports.Increment = {}));
 
