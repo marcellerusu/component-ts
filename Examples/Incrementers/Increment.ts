@@ -1,4 +1,4 @@
-import { Component, Dom } from '../../component-ts'
+import { Component, Dom } from '../../component'
 
 export namespace Increment {
   export type State = { count: number, id: number }

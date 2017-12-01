@@ -1,4 +1,4 @@
-import { Component, Dom } from '../../component-ts'
+import { Component, Dom } from '../../component'
 import { Increment } from './Increment'
 
 namespace Root {
