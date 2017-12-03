@@ -1,49 +1,36 @@
 import { Component, Dom } from '../../component'
-import { Increment } from './Increment'
+import * as Increment from './Increment'
 
-namespace Root {
-  type State = { incrementers: Increment.State[] }
+type State = Increment.State[]
 
-  type Kind = 'AddIncrementer' | Increment.Kind
-  type Data = Increment.Data | null
+type Action 
+  = ['AddIncrementer']
+  | Increment.Action
 
-  type Action = Component.Action<Kind, Data>
+type Cmd = Component.Cmd<State, Action>
 
-  const Render = (state: State): Dom.Element => 
-    Dom.Div(
-      [],
-      [
-        ...state.incrementers.map(Increment.Render),
-        Dom.Button(
-          [ Dom.OnClick<Action>({kind: 'AddIncrementer'}) ],
-          [ Dom.Text('Add')]
-        )
-      ]
-    )
+const render = (state: State): Dom.Element => 
+  Dom.div(
+    [],
+    [
+      ...state.map(Increment.Render),
+      Dom.button(
+        [ Dom.onClick<Action>(['AddIncrementer']) ],
+        [ Dom.text('Add') ]
+      )
+    ]
+  )
 
-  const Update = (state: State, action: Action): State => {
-    switch (action.kind) {
-      case 'AddIncrementer': 
-        const id = state.incrementers.map(inc => inc.id)
-          .reduce((prevId, curId) => Math.max(prevId, curId), 0) + 1
-        return { 
-          incrementers: [...state.incrementers, Increment.Create(id) ] 
-        }
-      case 'Increment':
-      case 'Decrement':      
-        return {
-          incrementers: state.incrementers.map(incr => 
-            incr.id === action.data
-              ? Increment.Update(incr, action as Increment.Action) 
-              : incr)
-        }
-      default:
-        return state
-    }
+const update = (action: Action) => (incrementers: State): State | Cmd => {
+  const [kind] = action
+  switch (kind) {
+    case 'AddIncrementer': 
+      const id = Math.max(...incrementers.map(s => s.id)) + 1
+      return [ ...incrementers, Increment.create(id) ] 
+    default:
+      return incrementers.map(Increment.Update(action as Increment.Action))
   }
-
-  // register root component
-  Component.CreateRootComponent<State, Action>({
-    state: { incrementers: [ Increment.Create(0) ] }, update: Update, render: Render 
-  })
 }
+
+// register root component
+Component.createRootComponent<State, Action>({ update, render, state: [Increment.create(0)] })
