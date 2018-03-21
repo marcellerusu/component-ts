@@ -8,3 +8,5 @@ Goals
 - Lots of support for algebraic data types
 - Limit mutation
 - Declaritive HTML api
+- Clear & concise design
+  - Components fit in a single file vs a file for reducers, file for action creators etc.
