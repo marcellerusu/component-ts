@@ -1,12 +1,7 @@
-# component-ts
-immutable elm influenced front end library in typescript
+The goal of this project was to explore the possibility of typed pure functional programming in TypeScript.
 
-Heavily inspired by Elm & React + Redux
-
-Goals
-- No classes
-- Lots of support for algebraic data types
-- Limit mutation
-- Declaritive HTML api
-- Clear & concise design
-  - Components fit in a single file vs a file for reducers, file for action creators etc.
+Features
+- [x] class-less design
+- [x] Declaritive HTML api
+- [x] Declaritive event emitting & handling
+- [x] Clear & concise component design
